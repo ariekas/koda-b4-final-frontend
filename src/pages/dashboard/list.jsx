@@ -46,7 +46,24 @@ const ListLink = () => {
     fetchLinks();
   }, []);
 
-  const totalPages = Math.ceil(links.length / 10);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const itemsPerPage = 10;
+
+  const filteredLinks = links.filter(link => {
+    const matchesSearch = link.shortUrl.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         link.originalUrl.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const paginatedLinks = filteredLinks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const totalFilteredPages = Math.ceil(filteredLinks.length / itemsPerPage);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -293,7 +310,7 @@ const ListLink = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {links.map((link) => (
+                  {paginatedLinks.map((link) => (
                     <tr key={link.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
@@ -356,7 +373,7 @@ const ListLink = () => {
 
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                Showing {links.length} links
+                Showing {paginatedLinks.length} of {filteredLinks.length} links
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -367,11 +384,11 @@ const ListLink = () => {
                   ‹
                 </button>
                 <span className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages || 1}
+                  Page {currentPage} of {totalFilteredPages || 1}
                 </span>
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(Math.min(totalFilteredPages, currentPage + 1))}
+                  disabled={currentPage === totalFilteredPages || totalFilteredPages === 0}
                   className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ›
