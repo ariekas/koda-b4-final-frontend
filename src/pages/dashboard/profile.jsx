@@ -13,10 +13,7 @@ export default function Profile() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate()
-  const [profileData, setProfileData] = useState({
-    fullName: '',
-    email: ''
-  });
+
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -48,10 +45,7 @@ export default function Profile() {
       console.log(data)
       if (data.success) {
         setUserProfile(data.Data);
-        setProfileData({
-          fullName: data.Data.username || '',
-          email: data.Data.email || ''
-        });
+       
 
         if (data.Data.pic) {
           setProfileImage(`${API_BASE_URL}/uploads/profiles/${data.Data.pic}`);
@@ -129,13 +123,13 @@ export default function Profile() {
   const validateProfile = () => {
     const errors = {};
 
-    if (!profileData.fullName.trim()) {
-      errors.fullName = 'Username is required';
+    if (!userProfile.username.trim()) {
+      errors.username = 'Username is required';
     }
 
-    if (!profileData.email.trim()) {
+    if (!userProfile.email.trim()) {
       errors.email = 'Email is required';
-    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(profileData.email)) {
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(userProfile.email)) {
       errors.email = 'Invalid email address';
     }
 
@@ -175,7 +169,6 @@ export default function Profile() {
       setError(null);
       setSuccessMessage(null);
 
-      console.log('Profile Data:', profileData);
       setSuccessMessage('Profile updated successfully!');
 
       setTimeout(() => {
@@ -402,15 +395,15 @@ export default function Profile() {
             </label>
             <input
               type="text"
-              value={profileData.fullName}
+              value={userProfile.username}
               onChange={(e) => {
-                setProfileData({ ...profileData, fullName: e.target.value });
-                setProfileErrors({ ...profileErrors, fullName: '' });
+                setUserProfile({ ...userProfile, username: e.target.value });
+                setProfileErrors({ ...profileErrors, username: '' });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {profileErrors.fullName && (
-              <p className="text-red-500 text-sm mt-1">{profileErrors.fullName}</p>
+            {profileErrors.username && (
+              <p className="text-red-500 text-sm mt-1">{profileErrors.username}</p>
             )}
           </div>
 
@@ -420,9 +413,9 @@ export default function Profile() {
             </label>
             <input
               type="email"
-              value={profileData.email}
+              value={userProfile.email}
               onChange={(e) => {
-                setProfileData({ ...profileData, email: e.target.value });
+                setUserProfile({ ...userProfile, email: e.target.value });
                 setProfileErrors({ ...profileErrors, email: '' });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -432,13 +425,6 @@ export default function Profile() {
             )}
           </div>
 
-          {userProfile && (
-            <div className="mb-6 p-3 bg-gray-50 rounded-md">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">User ID:</span> {userProfile.id}
-              </p>
-            </div>
-          )}
 
           <button
             onClick={handleProfileSubmit}
