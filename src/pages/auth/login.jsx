@@ -1,55 +1,36 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
-const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Email must be valid';
-    return '';
-};
-
-const validatePassword = (password) => {
-    if (!password) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
-    return '';
-};
+const schema = yup.object({
+    email: yup
+        .string()
+        .required('Email is required')
+        .email('Email must be valid'),
+    password: yup
+        .string()
+        .required('Password is required')
+        .min(6, 'Password must be at least 6 characters'),
+}).required();
 
 export default function Login() {
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [errors, setErrors] = useState({ email: '', password: '' });
-    const [touched, setTouched] = useState({ email: false, password: false });
     const [isLoading, setIsLoading] = useState(false);
     const [apiError, setApiError] = useState('');
     const [loginSuccess, setLoginSuccess] = useState(false);
-    const navigate = useNavigate()
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const navigate = useNavigate();
 
-        if (touched[name]) {
-            const error = name === 'email' ? validateEmail(value) : validatePassword(value);
-            setErrors(prev => ({ ...prev, [name]: error }));
-        }
-    };
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm({
+        resolver: yupResolver(schema),
+        mode: 'onBlur',
+    });
 
-    const handleBlur = (e) => {
-        const { name, value } = e.target;
-        setTouched(prev => ({ ...prev, [name]: true }));
-        const error = name === 'email' ? validateEmail(value) : validatePassword(value);
-        setErrors(prev => ({ ...prev, [name]: error }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        const emailError = validateEmail(formData.email);
-        const passwordError = validatePassword(formData.password);
-
-        setErrors({ email: emailError, password: passwordError });
-        setTouched({ email: true, password: true });
-
-        if (emailError || passwordError) return;
-
+    const onSubmit = async (data) => {
         setIsLoading(true);
         setApiError('');
 
@@ -60,18 +41,19 @@ export default function Login() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password,
+                    email: data.email,
+                    password: data.password,
                 }),
             });
 
             const result = await response.json();
+            console.log(result)
             if (result.success) {
                 localStorage.setItem('token', result.Data.accessToken);
+                localStorage.setItem('refreshToken', result.Data.refreshToken)
                 setLoginSuccess(true);
                 setApiError('');
                 setTimeout(() => {
-                    navigate('/');
                     navigate('/');
                 }, 3000);
             } else {
@@ -91,9 +73,7 @@ export default function Login() {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <div className="flex items-center justify-center gap-2 mb-6">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
+                        <img src="iconnew.png" alt="" />
                         <span className="text-lg font-medium text-gray-900">Koda Shortlink</span>
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
@@ -101,7 +81,7 @@ export default function Login() {
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="space-y-5">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                         {loginSuccess && (
                             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
                                 Login successful! Redirecting...
@@ -126,18 +106,15 @@ export default function Login() {
                                 </div>
                                 <input
                                     type="email"
-                                    name="email"
                                     id="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    onBlur={handleBlur}
+                                    {...register('email')}
                                     placeholder="john@example.com"
-                                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors ${touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
+                                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors ${errors.email ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                 />
                             </div>
-                            {touched.email && errors.email && (
-                                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                            {errors.email && (
+                                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
                             )}
                         </div>
 
@@ -153,23 +130,21 @@ export default function Login() {
                                 </div>
                                 <input
                                     type="password"
-                                    name="password"
                                     id="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    onBlur={handleBlur}
+                                    {...register('password')}
                                     placeholder="••••••••"
-                                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors ${touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
+                                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors ${errors.password ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                 />
                             </div>
-                            {touched.password && errors.password && (
-                                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                            {errors.password && (
+                                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
                             )}
                         </div>
 
                         <div className="text-right">
                             <button
+                                type="button"
                                 onClick={() => alert('Forgot password feature')}
                                 className="text-sm text-blue-600 hover:text-blue-700"
                             >
@@ -178,7 +153,7 @@ export default function Login() {
                         </div>
 
                         <button
-                            onClick={handleSubmit}
+                            type="submit"
                             disabled={isLoading}
                             className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -200,6 +175,7 @@ export default function Login() {
                         </div>
 
                         <button
+                            type="button"
                             onClick={() => alert('Google OAuth integration needed')}
                             className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
                         >
@@ -211,13 +187,13 @@ export default function Login() {
                             </svg>
                             Continue with Google
                         </button>
-                    </div>
+                    </form>
                 </div>
 
                 <p className="text-center mt-6 text-gray-600">
                     Don't have an account?{' '}
                     <button
-                        onClick={() => alert('Navigate to sign up page')}
+                        onClick={() => navigate("/register")}
                         className="text-blue-600 font-medium hover:text-blue-700"
                     >
                         Sign up
