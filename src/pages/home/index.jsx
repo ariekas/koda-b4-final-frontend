@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
   const [url, setUrl] = useState('');
@@ -7,6 +8,7 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [shortLink, setShortLink] = useState(null);
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate()
 
   const validateUrl = (urlString) => {
     if (!urlString.trim()) {
@@ -22,7 +24,7 @@ export default function HomePage() {
       if (!urlObj.hostname) {
         return 'Invalid URL format';
       }
-    } catch{
+    } catch {
       return 'Invalid URL format';
     }
 
@@ -42,7 +44,6 @@ export default function HomePage() {
 
     try {
       const token = localStorage.getItem('token');
-      
       if (!token) {
         setError('Please sign in to shorten links');
         setLoading(false);
@@ -97,24 +98,72 @@ export default function HomePage() {
     }
   };
 
+  async function handleLogout() {
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (!refreshToken) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8082/api/v1/auth/logount", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Logout error:", data.message);
+      }
+
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+
+    navigate("/login");
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
+              <img src="iconnew.png" alt="" />
               <span className="text-xl font-semibold text-gray-900">Koda Shortlink</span>
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-gray-700 hover:text-gray-900 font-medium">
-                Sign In
-              </button>
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium">
+              {localStorage.getItem('token') ? (
+                <button
+                  className="text-gray-700 hover:text-gray-900 font-medium"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  className="text-gray-700 hover:text-gray-900 font-medium"
+                  onClick={() => navigate("/login")}
+                >
+                  Sign In
+                </button>
+              )}
+
+              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium" onClick={() => {
+                navigate("/dashboard")
+              }}>
                 Get Started
               </button>
             </div>
@@ -149,7 +198,7 @@ export default function HomePage() {
                 disabled={loading}
                 className="flex-1 px-6 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
-              <button 
+              <button
                 onClick={handleShorten}
                 disabled={loading}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-medium whitespace-nowrap disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
@@ -168,37 +217,33 @@ export default function HomePage() {
 
           {shortLink && (
             <div className="max-w-2xl mx-auto mb-20 bg-white border border-gray-200 rounded-lg shadow-md p-8">
-              <div className="mb-4">
-                <p className="text-sm text-gray-500 mb-2">Original URL:</p>
-                <p className="text-gray-700 break-all">{shortLink.originalUrl}</p>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm text-gray-500 mb-2">Shortened URL:</p>
-                <div className="flex gap-3 items-center">
-                  <input
-                    type="text"
-                    value={`http://localhost:8082/${shortLink.short_url}`}
-                    readOnly
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm"
-                  />
-                  <button
-                    onClick={handleCopy}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium whitespace-nowrap flex items-center gap-2 transition-colors"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy
-                      </>
-                    )}
-                  </button>
-                </div>
+              <button className='flex justify-center text-red-500' onClick={()=> {
+                setShortLink(false)
+              }}>X</button>
+              <p className="text-sm text-gray-500 mb-2">Your shortened URL::</p>
+              <div className="flex gap-3 items-center">
+                <input
+                  type="text"
+                  value={`http://localhost:8082/${shortLink.short_url}`}
+                  readOnly
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm"
+                />
+                <button
+                  onClick={handleCopy}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium whitespace-nowrap flex items-center gap-2 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
